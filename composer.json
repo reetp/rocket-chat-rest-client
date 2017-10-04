@@ -1,6 +1,12 @@
 {
     "name": "yvestan/rocket-chat-rest-client",
     "description": "Rocket Chat REST API client in PHP.",
+    "version": "dev-master",
+    "source": {
+        "url": "git://github.com/yvestan/rocket-chat-rest-client.git",
+        "type": "git",
+        "reference": "master"
+    },
     "autoload": {
         "classmap": ["src/"]
     },
