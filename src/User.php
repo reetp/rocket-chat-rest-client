@@ -13,6 +13,7 @@ class User extends Client {
     public $email;
     public $active = true;
     public $verified = true;
+    public $joinDefaultChannels = true;
     public $roles = ['user'];
 
     public $livechatAgent = null;
@@ -109,6 +110,7 @@ class User extends Client {
                 'password' => $this->password,
                 'roles' => $this->roles,
                 'verified' => $this->verified,
+                'joinDefaultChannels' => $this->joinDefaultChannels,
             ))
             ->send();
 
@@ -124,12 +126,16 @@ class User extends Client {
     /**
      * Update user.
      */
-    public function update($data)
+    public function update($data, $userId = null)
     {
         $this->setData($data);
 
+        if(empty($userId)) {
+            $userId = $this->id;
+        }
+
         $requestBody = array(
-            'userId' => $this->id,
+            'userId' => $userId,
             'data' => array(
                 'name' => $this->name,
                 'email' => $this->email,
@@ -137,6 +143,7 @@ class User extends Client {
                 'roles' => $this->roles,
                 'active' => $this->active,
                 'verified' => $this->verified,
+                'joinDefaultChannels' => $this->joinDefaultChannels,
             ),
         );
 
