@@ -58,10 +58,13 @@ class Client{
      * Gets all of the users in the system and their information, the result is
      * only limited to what the callee has access to view.
      */
-        public function list_users($query = []){
+        public function list_users($query = [], $fields = []){
         $arguments = [];
         if($query) {
             $arguments['query'] = json_encode($query);
+        }
+        if($fields) {
+            $arguments['fields'] = json_encode($fields, JSON_FORCE_OBJECT);
         }
 
         $url = $this->api . 'users.list' . (($arguments) ? '?'.http_build_query($arguments) : '');
