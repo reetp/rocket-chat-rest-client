@@ -8,17 +8,29 @@ class Client{
 
     public $api;
 
+    public $adminAuthTemplate;
+    public $runningAsUser;
+
     public $lastError = null;
 
     //static lists
-    private static $allUsers;
-    private static $allChannels;
-    private static $allGroups;
-    private static $allLivechatAgents;
-    private static $allLivechatManagers;
-    private static $allLivechatDepartments;
+    public $allUsers;
+    public $allChannels;
+    public $allGroups;
+    public $allLivechatAgents;
+    public $allLivechatManagers;
+    public $allLivechatDepartments;
 
-    function __construct(){
+    public static function getInstance()
+    {
+        static $inst = null;
+        if ($inst === null) {
+            $inst = new self();
+        }
+        return $inst;
+    }
+
+    private function __construct(){
         $this->api = ROCKET_CHAT_INSTANCE . REST_API_ROOT;
 
         // set template request to send and expect JSON
@@ -28,19 +40,27 @@ class Client{
         Request::ini( $tmp );
     }
 
+    public function getUrl($route, $arguments = []) {
+//        return $this->api . $route . ((count($arguments)) ? '?'.http_build_query($arguments, null, null, PHP_URL_QUERY) : '');
+        return $this->api . $route . ((count($arguments)) ? '?'.http_build_query($arguments, null, '&', PHP_QUERY_RFC3986) : '');
+    }
+
+
     /**
      * Get version information. This simple method requires no authentication.
      */
     public function version() {
-        $response = Request::get( $this->api . 'info' )->send();
-        return $response->body->info->version;
+        if(!empty($this->apiVersion)) return $this->apiVersion;
+        $response = Request::get( $this->getUrl('info') )->send();
+        $this->apiVersion = $response->body->info->version;
+        return $this->apiVersion;
     }
 
     /**
      * Quick information about the authenticated user.
      */
     public function me() {
-        $response = Request::get( $this->api . 'me' )->send();
+        $response = Request::get( $this->getUrl('me') )->send();
 
         if( $response->body->status != 'error' ) {
             if( isset($response->body->success) && $response->body->success == true ) {
@@ -52,23 +72,32 @@ class Client{
         }
     }
 
+    public function runAsUser($user, $callback) {
+        //auth as user
+        $this->runningAsUser = true;
+        $user->loginByToken();
+
+        $callback();
+
+        //restore
+        $this->runningAsUser = false;
+        Request::ini( $this->adminAuthTemplate );
+    }
+
+
     /**
      * List all of the users and their information.
      *
      * Gets all of the users in the system and their information, the result is
      * only limited to what the callee has access to view.
      */
-        public function list_users($query = [], $fields = []){
-        $arguments = [];
-        if($query) {
-            $arguments['query'] = json_encode($query);
-        }
-        if($fields) {
-            $arguments['fields'] = json_encode($fields, JSON_FORCE_OBJECT);
-        }
-
-        $url = $this->api . 'users.list' . (($arguments) ? '?'.http_build_query($arguments) : '');
-
+    public function loadUsers($query = []){
+        if(!count($query)) $query = ['type' => 'user']; // default filter
+        $arguments = [
+            'count' => 0,
+            'query' => json_encode($query),
+        ];
+        $url = $this->getUrl('users.list', $arguments);
         $response = Request::get($url)->send();
 
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
@@ -79,60 +108,125 @@ class Client{
         }
     }
 
+    public function getUsers($query = [])
+    {
+        $result = [];
+        $list = $this->loadUsers($query);
+        if(!$list) return $result;
+
+        foreach($list as $userData) {
+            $user = new Model\User();
+            $user->setRemoteData($userData);
+            $result[$user->username] = $user;
+        }
+        return $result;
+    }
+
     /**
      * Get all of the users and return them as \RocketChat\User array
      * @return array
      */
     public function getAllUsers($update = false, $query = []) {
-        if(!empty(self::$allUsers) && !$update) return self::$allUsers;
+        if(!empty($this->allUsers) && !$update) return $this->allUsers;
 
-        $list = $this->list_users($query);
-        $result = [];
-        foreach($list as $userData) {
-            $user = new User();
-            $user->setRemoteData($userData);
-            $result[$user->username] = $user;
-        }
+        $this->allUsers = $this->getUsers($query);
 
-        self::$allUsers = $result;
-
-        return $result;
+        return $this->allUsers;
     }
 
     /**
      * List the private groups the caller is part of.
      */
-    public function list_groups() {
-        $response = Request::get( $this->api . 'groups.list' )->send();
-
-        if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
-            $groups = array();
-            foreach($response->body->groups as $group){
-                $groups[] = new Group($group);
-            }
-            return $groups;
-        } else {
+    public function loadGroups() {
+        $response = Request::get($this->getUrl('groups.list') )->send();
+        if( $response->code != 200 || !isset($response->body->success) || !$response->body->success ) {
             $this->lastError = $response->body->error;
             return false;
         }
+        return $response->body->groups;
+    }
+
+    public function getGroups()
+    {
+        $result = [];
+        $list = $this->loadGroups();
+        if(!$list) return $result;
+
+        foreach($list as $group){
+            $result[] = new Model\Group($group);
+        }
+        return $result;
+
     }
 
     /**
-     * List the channels the caller has access to.
+     * Room Members
+     *
+     * @param $type
+     * @param $id
+     * @return bool
+     * @throws \Exception
      */
-    public function list_channels() {
-        $response = Request::get( $this->api . 'channels.list' )->send();
+    public function loadRoomMembers($type, $id) {
+        $routesByType = [
+            'channel' => 'channels.members',
+            'dm' => 'dm.members',
+        ];
+        $route = isset($routesByType[$type]) ? $routesByType[$type] : null;
+        if(!$route) {
+            throw new \Exception('Route to load room members is not defined for type '.$type);
+        }
 
-        if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
-            $groups = array();
-            foreach($response->body->channels as $group){
-                $groups[] = new Channel($group);
-            }
-            return $groups;
-        } else {
+        $arguments = [
+            'roomId' => $id,
+            'sort' => json_encode(['username' => 1]),
+        ];
+        $response = Request::get($this->getUrl($route, $arguments))->send();
+
+        if($response->code != 200 || !isset($response->body->success) || $response->body->success != true ) {
             $this->lastError = $response->body->error;
             return false;
         }
+        return $response->body->members;
+    }
+
+    public function getRoomMembers($type, $id) {
+        $list = $this->loadRoomMembers($type, $id);
+        if(!$list) return false;
+
+        $users = $this->getAllUsers();
+
+        $result = [];
+        foreach ($list as $member) {
+            if(!isset($users[$member->username])) continue;
+            $result[$member->username] = $users[$member->username];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Load Rooms : Channels (all on the server)
+     */
+    public function loadChannels() {
+        $response = Request::get($this->getUrl('channels.list'))->send();
+        if($response->code != 200 || !isset($response->body->success) || $response->body->success != true ) {
+            $this->lastError = $response->body->error;
+            return false;
+        }
+        return $response->body->channels;
+    }
+
+    public function getChannels() {
+        $list = $this->loadChannels();
+
+        $result = [];
+        foreach($list as $channelData) {
+            $channel = new Model\Room\Channel();
+            $channel->setRemoteData($channelData);
+            $result[$channel->id] = $channel;
+        }
+        return $result;
     }
 
     /**
@@ -142,29 +236,80 @@ class Client{
     public function getAllChannels($update = false) {
         if($this->allChannels && !$update) return $this->allChannels;
 
-        $list = $this->list_channels();
-        $result = [];
-        foreach($list as $channel) {
-            $result[$channel->id] = $channel;
+        $this->allChannels = $this->getChannels();
+
+        return $this->allChannels;
+    }
+
+    /**
+     * @param $id
+     * @return array|bool
+     */
+    public function getChannelMembers($id) {
+        return $this->getRoomMembers('channel', $id);
+    }
+
+
+    /**
+     * Load Rooms : Direct Messages
+     * @param array $query
+     * @param bool $currentUser
+     * @return array|bool
+     */
+    public function loadDms($query = [], $currentUser = false) {
+        $arguments = ['count' => 0,];
+        if($query) $arguments['query'] = json_encode($query);
+
+        $route = ($currentUser) ? 'dm.list' : 'dm.list.everyone';
+        $url = $this->getUrl($route, $arguments);
+        $response = Request::get($url)->send();
+
+        if( !$response->code == 200 || !isset($response->body->success) || !$response->body->success) {
+            $this->lastError = $response->body->error;
+            return false;
         }
+        return $response->body->ims;
+    }
 
-        $this->allChannels = $result;
+    /**
+     * @param array $filter
+     * @param bool $currentUser
+     * @return array
+     */
+    public function getDms($filter = [], $currentUser = false) {
+        $list = $this->loadDms($filter, $currentUser);
 
+        $result = [];
+        foreach($list as $dmData) {
+            $dm = new Model\Room\Dm();
+            $dm->setRemoteData($dmData);
+            $result[$dm->id] = $dm;
+        }
         return $result;
     }
+
+    /**
+     * @param $id
+     * @return array|bool
+     */
+    public function getDmMembers($id) {
+        return $this->getRoomMembers('dm', $id);
+    }
+
+
 
     /**
      * List all livechat users 
      * @return array
      */
-    public function list_livechat_users($type = Livechat\User::TYPE_AGENT)
+    public function loadLivechatUsers($type = Model\Livechat\User::TYPE_AGENT)
     {
-        $response = Request::get( $this->api . 'livechat/users/'.$type )->send();
+        $response = Request::get($this->getUrl('livechat/users/'.$type))->send();
 
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             $list = array();
             foreach($response->body->users as $livechatUserData){
-                $livechatUser = new Livechat\User(array('type' => $type));
+                $livechatUser = new Model\Livechat\User(['type' => $type]);
                 $livechatUser->setRemoteData($livechatUserData);
                 $list[] = $livechatUser;
             }
@@ -180,15 +325,15 @@ class Client{
      * @return array
      */
     public function getAllLivechatAgents($update = false) {
-        if($this->allLivechatUsers && !$update) return $this->allLivechatAgents;
+        if($this->allLivechatAgents && !$update) return $this->allLivechatAgents;
 
-        $list = $this->list_livechat_users(Livechat\User::TYPE_AGENT);
+        $list = $this->loadLivechatUsers(Model\Livechat\User::TYPE_AGENT);
         $result = [];
         foreach($list as $item) {
             $result[$item->id] = $item;
         }
 
-        $this->allLivechatUsers = $result;
+        $this->allLivechatAgents = $result;
 
         return $result;
     }
@@ -200,7 +345,7 @@ class Client{
     public function getAllLivechatManagers($update = false) {
         if($this->allLivechatManagers && !$update) return $this->allLivechatManagers;
 
-        $list = $this->list_livechat_users(Livechat\User::TYPE_MANAGER);
+        $list = $this->loadLivechatUsers(Model\Livechat\User::TYPE_MANAGER);
         $result = [];
         foreach($list as $item) {
             $result[$item->id] = $item;
@@ -212,25 +357,36 @@ class Client{
     }
 
     /**
-     * List all livechat users 
-     * @return array
+     * Load livechat departments data
+     * @return array|bool
      */
-    public function list_livechat_departments()
+    public function loadLivechatDepartments()
     {
-        $response = Request::get( $this->api . 'livechat/department' )->send();
-        if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
-            $list = array();
-            foreach($response->body->departments as $livechatDepartmentData){
-                $livechatDepartment = new Livechat\Department();
-                $livechatDepartment->setRemoteData($livechatDepartmentData);
-                $livechatDepartment->loadInfo();
-                $list[] = $livechatDepartment;
-            }
-            return $list;
-        } else {
+        $response = Request::get($this->getUrl('livechat/department'))->send();
+        if( !$response->code == 200 || !isset($response->body->success) || !$response->body->success) {
             $this->lastError = $response->body->error;
             return false;
         }
+        return $response->body->departments;
+    }
+
+    /**
+     * Get livechat departments as Models
+     * @return array|bool
+     */
+    public function getLivechatDepartments()
+    {
+        $list = $this->loadLivechatDepartments();
+        if(!$list) return false;
+
+        $result = [];
+        foreach($list as $livechatDepartmentData){
+            $livechatDepartment = new Model\Livechat\Department();
+            $livechatDepartment->setRemoteData($livechatDepartmentData);
+            $livechatDepartment->loadInfo();
+            $list[$livechatDepartment->id] = $livechatDepartment;
+        }
+        return $result;
     }
 
     /**
@@ -240,13 +396,8 @@ class Client{
     public function getAllLivechatDepartments($update = false) {
         if($this->allLivechatDepartments && !$update) return $this->allLivechatDepartments;
 
-        $list = $this->list_livechat_departments();
-        $result = [];
-        foreach($list as $item) {
-            $result[$item->id] = $item;
-        }
-
-        $this->allLivechatDepartments = $result;
+        $result = $this->getLivechatDepartments();
+        if($result) $this->allLivechatDepartments = $result;
 
         return $result;
     }
