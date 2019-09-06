@@ -65,6 +65,7 @@ class User extends BaseModel{
                 Request::ini( $template );
             }
             $this->id = $response->body->data->userId;
+            $this->authToken = $response->body->data->authToken;
             return true;
         } else {
             $this->lastError = $response->body->message;
