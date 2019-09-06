@@ -58,7 +58,8 @@ if( !$newuser->login(false) ) {
 echo "user {$newuser->nickname} created ({$newuser->id})\n";
 ```
 
-## Post a message
+## Create a channel and post message
+# This needs testing
 ```php
 // create a new channel
 $channel = new \RocketChat\Channel( 'my_new_channel', array($newuser, $admin) );
@@ -66,5 +67,22 @@ $channel->create();
 // post a message
 $channel->postMessage('Hello world');
 ```
+
+## Post message to channel
+# Allow logged in user to create message to any channel they have permissions for
+# Needs a properly formatted JSON string.
+# see https://rocket.chat/docs/developer-guides/rest-api/chat/postmessage/
+```php
+$message      = '{ "channel": "general", "text": "Test message from PHP API", "emoji": ":partying_face:" }';```
+$channel      = new \RocketChat\Model\Room\Channel();
+$postMessage  = $channel->postInChannel($message);
+```
+
+## Logout
+```php
+//Logout regardless
+$bot->logout();
+```
+
 ## Credits
 This REST client uses the excellent [Httpful](http://phphttpclient.com/) PHP library by [Nate Good](https://github.com/nategood) ([github repo is here](https://github.com/nategood/httpful)).
