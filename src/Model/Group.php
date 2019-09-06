@@ -50,8 +50,9 @@ class Group extends BaseModel {
             $this->id = $response->body->group->_id;
             return $response->body->group;
         } else {
-            echo( $response->body->error . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not create a private group");
+            //echo( $response->body->error . "\n" );
+            //return false;
         }
     }
 
@@ -65,8 +66,9 @@ class Group extends BaseModel {
             $this->id = $response->body->group->_id;
             return $response->body;
         } else {
-            echo( $response->body->error . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not get info about the group");
+            //echo( $response->body->error . "\n" );
+            //return false;
         }
     }
 
@@ -86,9 +88,10 @@ class Group extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            if( isset($response->body->error) )	echo( $response->body->error . "\n" );
-            else if( isset($response->body->message) )	echo( $response->body->message . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not post message");
+            //if( isset($response->body->error) )	echo( $response->body->error . "\n" );
+            //else if( isset($response->body->message) )	echo( $response->body->message . "\n" );
+            //return false;
         }
     }
 
@@ -103,8 +106,9 @@ class Group extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            echo( $response->body->error . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not remove private group");
+            //echo( $response->body->error . "\n" );
+            //return false;
         }
     }
 
@@ -122,8 +126,9 @@ class Group extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            echo( $response->body->error . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could kick user $user from group");
+            //echo( $response->body->error . "\n" );
+            //return false;
         }
     }
 
@@ -141,8 +146,9 @@ class Group extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            echo( $response->body->error . "\n" );
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not invite user $user to the private group");
+            //echo( $response->body->error . "\n" );
+            //return false;
         }
     }
 

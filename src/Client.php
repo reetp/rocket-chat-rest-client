@@ -40,6 +40,16 @@ class Client{
         Request::ini( $tmp );
     }
 
+    public function createExceptionFromResponse($response, $prefix){
+        if(!empty($response->body->error)){
+            return new \Exception("$prefix: ".$response->body->error);
+        } else if(!empty($response->body)){
+            return new \Exception("$prefix: ".$response->body);
+        } else {
+            return new \Exception("$prefix: unknown error!");
+        }
+    }
+
     public function getUrl($route, $arguments = []) {
 //        return $this->api . $route . ((count($arguments)) ? '?'.http_build_query($arguments, null, null, PHP_URL_QUERY) : '');
         return $this->api . $route . ((count($arguments)) ? '?'.http_build_query($arguments, null, '&', PHP_QUERY_RFC3986) : '');
@@ -67,8 +77,9 @@ class Client{
                 return $response->body;
             }
         } else {
-            $this->lastError = $response->body->message;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not get info for authenticated user");
+            //$this->lastError = $response->body->message;
+            //return false;
         }
     }
 
@@ -105,8 +116,9 @@ class Client{
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return $response->body->users;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not loadUsers with users.list");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -142,8 +154,9 @@ class Client{
     public function loadGroups() {
         $response = Request::get($this->getUrl('groups.list') )->send();
         if( $response->code != 200 || !isset($response->body->success) || !$response->body->success ) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not load private groups groups.list");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
         return $response->body->groups;
     }
@@ -186,8 +199,9 @@ class Client{
         $response = Request::get($this->getUrl($route, $arguments))->send();
 
         if($response->code != 200 || !isset($response->body->success) || $response->body->success != true ) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not load room members");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
         return $response->body->members;
     }
@@ -213,8 +227,9 @@ class Client{
     public function loadChannels() {
         $response = Request::get($this->getUrl('channels.list'))->send();
         if($response->code != 200 || !isset($response->body->success) || $response->body->success != true ) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not load all channels in channels.list");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
         return $response->body->channels;
     }
@@ -267,8 +282,9 @@ class Client{
         $response = Request::get($url)->send();
 
         if( !$response->code == 200 || !isset($response->body->success) || !$response->body->success) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could load dm.list or dm.list.everyone");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
         return $response->body->ims;
     }
@@ -317,8 +333,9 @@ class Client{
             }
             return $list;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not load livechat users");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -366,8 +383,9 @@ class Client{
     {
         $response = Request::get($this->getUrl('livechat/department'))->send();
         if( !$response->code == 200 || !isset($response->body->success) || !$response->body->success) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not loadlivechatDepartments livechat/department");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
         return $response->body->departments;
     }

@@ -53,8 +53,9 @@ class Channel extends RoomModel {
             $this->id = $response->body->channel->_id;
             return $response->body->channel;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+		    throw $this->createExceptionFromResponse($response, "Could not create new channel");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -68,8 +69,9 @@ class Channel extends RoomModel {
             $this->id = $response->body->channel->_id;
             return $response->body;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not get channel info");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -89,9 +91,10 @@ class Channel extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            if( isset($response->body->error) )	$this->lastError = $response->body->error;
-            else if( isset($response->body->message) ) $this->lastError = $response->body->message;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not post message to channel $this->name");
+            //if( isset($response->body->error) )	$this->lastError = $response->body->error;
+            //else if( isset($response->body->message) ) $this->lastError = $response->body->message;
+            //return false;
         }
     }
 
@@ -106,8 +109,9 @@ class Channel extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not remove channel from the user’s list of channels");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -125,8 +129,9 @@ class Channel extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not kick user $user from channel $this->name");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -144,8 +149,9 @@ class Channel extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not invite user $user to channel $this->name");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
     
@@ -164,9 +170,41 @@ class Channel extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            if( isset($response->body->error) )	$this->lastError = $response->body->error;
-            else if( isset($response->body->message) ) $this->lastError = $response->body->message;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not postInChannel");
+            //if( isset($response->body->error) )	$this->lastError = $response->body->error;
+            //else if( isset($response->body->message) ) $this->lastError = $response->body->message;
+            //return false;
         }
     }
+
+    /**
+	 * Adds owner to the channel.
+	 */
+	public function addOwner( $user ) {
+		$userId = is_string($user) ? $user : $user->id;
+		$response = Request::post( $this->api . 'channels.addOwner' )
+			->body(array('roomId' => $this->id, 'userId' => $userId))
+			->send();
+		if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
+			return true;
+		} else {
+            throw $this->createExceptionFromResponse($response, "Could not add user $user as owner of channel $this->name");
+		}
+	}
+
+	/**
+	 * Removes owner of the channel.
+	 */
+	public function removeOwner( $user ) {
+		$userId = is_string($user) ? $user : $user->id;
+		$response = Request::post( $this->api . 'channels.removeOwner' )
+			->body(array('roomId' => $this->id, 'userId' => $userId))
+			->send();
+		if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
+			return true;
+		} else {
+            throw $this->createExceptionFromResponse($response, "Could not kick user $user from chanel $this->name");
+		}
+	}
+    
 }

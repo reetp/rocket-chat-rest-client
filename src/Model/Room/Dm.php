@@ -38,8 +38,9 @@ class Dm extends RoomModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not close and remove dm from list");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 }

@@ -54,8 +54,9 @@ class Department extends BaseModel {
             $this->setRemoteData($response->body->department);
             $this->setRemoteAgentsData($response->body->agents);
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not loadInfo for livechat");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -84,8 +85,9 @@ class Department extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not update licechat/department");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 

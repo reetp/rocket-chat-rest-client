@@ -68,8 +68,9 @@ class User extends BaseModel{
             $this->authToken = $response->body->data->authToken;
             return true;
         } else {
-            $this->lastError = $response->body->message;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not authenticate with the REST API");
+            //$this->lastError = $response->body->message;
+            //return false;
         }
     }
 
@@ -81,8 +82,9 @@ class User extends BaseModel{
             ->send();
 
         if($response->code != 200 || !isset($response->body->success) && !$response->body->success) {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not get Auth Token");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
 
         $this->authToken =  $response->body->data->authToken;
@@ -111,8 +113,9 @@ class User extends BaseModel{
             $this->setRemoteData($response->body->user);
             return $response->body;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not get user's information");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -136,8 +139,9 @@ class User extends BaseModel{
             $this->setRemoteData($response->body->user);
             return $this->remoteData;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not create new user");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -198,8 +202,9 @@ class User extends BaseModel{
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not delete channel $this->name");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 
@@ -287,8 +292,9 @@ class User extends BaseModel{
             //$this->id = $response->body->channel->_id; // Que?
             return $response->body;
         } else {
-            $this->lastError = $response->body->error;
-            return false;
+            throw $this->createExceptionFromResponse($response, "Could not logout");
+            //$this->lastError = $response->body->error;
+            //return false;
         }
     }
 

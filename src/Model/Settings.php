@@ -29,7 +29,8 @@ class Settings extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return $response->body->value;
         } else {
-            echo( $response->body->error . "\n" );
+            throw $this->createExceptionFromResponse($response, "Could not get setting $id");
+            //echo( $response->body->error . "\n" );
         }
     }
 
@@ -44,7 +45,8 @@ class Settings extends BaseModel {
         if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
             return true;
         } else {
-            echo( $response->body->error . "\n" );
+            throw $this->createExceptionFromResponse($response, "Could not update setting $id to $value");
+            //echo( $response->body->error . "\n" );
         }
     }
 
@@ -58,8 +60,9 @@ class Settings extends BaseModel {
         fclose($f);
 
         if( $settings === null ) {
-            echo "Erreur de décodage json pour le fichier {$this->file}\n";
-            return;
+            throw new \Exception("Not possible to decode local settings file: $this->file");
+            //echo "Erreur de décodage json pour le fichier {$this->file}\n";
+            //return;
         }
 
         foreach($settings as $id => $value){
