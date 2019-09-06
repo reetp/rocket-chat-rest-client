@@ -30,7 +30,7 @@ class Client{
         return $inst;
     }
 
-    private function __construct(){
+    public function __construct(){
         $this->api = ROCKET_CHAT_INSTANCE . REST_API_ROOT;
 
         // set template request to send and expect JSON
@@ -72,6 +72,8 @@ class Client{
         }
     }
 
+   
+    
     public function runAsUser($user, $callback) {
         //auth as user
         $this->runningAsUser = true;
