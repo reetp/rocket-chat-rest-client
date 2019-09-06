@@ -273,4 +273,22 @@ class User extends BaseModel{
 
         return $result;
     }
+    
+
+    /**
+     * Logout from server.
+     */
+    public function logout() {
+        // Really bad if you miss-spell 'logout' you still get a 220 OK response
+        // https://github.com/RocketChat/Rocket.Chat/issues/15313
+        $response = Request::post( $this->getClient()->getUrl('logout') ) ->send();
+        if( $response->code == 200 && isset($response->body->status) && $response->body->status == 'success' ) {
+            //$this->id = $response->body->channel->_id; // Que?
+            return $response->body;
+        } else {
+            $this->lastError = $response->body->error;
+            return false;
+        }
+    }
+
 }
