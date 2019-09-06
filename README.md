@@ -59,7 +59,7 @@ echo "user {$newuser->nickname} created ({$newuser->id})\n";
 ```
 
 ## Create a channel and post message
-# This needs testing
+#### This needs testing
 ```php
 // create a new channel
 $channel = new \RocketChat\Channel( 'my_new_channel', array($newuser, $admin) );
@@ -69,9 +69,9 @@ $channel->postMessage('Hello world');
 ```
 
 ## Post message to channel
-# Allow logged in user to create message to any channel they have permissions for
-# Needs a properly formatted JSON string.
-# see https://rocket.chat/docs/developer-guides/rest-api/chat/postmessage/
+#### Allow logged in user to create message to any channel they have permissions for
+#### Needs a properly formatted JSON string.
+#### see https://rocket.chat/docs/developer-guides/rest-api/chat/postmessage/
 ```php
 $message      = '{ "channel": "general", "text": "Test message from PHP API", "emoji": ":partying_face:" }';```
 $channel      = new \RocketChat\Model\Room\Channel();
