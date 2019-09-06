@@ -2,3 +2,5 @@
 *.swp
 *.swo
 *.komodoproject
+vendor/*
+*.lock
