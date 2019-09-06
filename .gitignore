@@ -4,3 +4,4 @@
 *.komodoproject
 vendor/*
 *.lock
+*.phar
