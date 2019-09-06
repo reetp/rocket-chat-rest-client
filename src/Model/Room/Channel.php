@@ -148,4 +148,25 @@ class Channel extends RoomModel {
             return false;
         }
     }
+    
+     /**
+     * Post a message in this channel, as the logged-in user
+     */
+    public function postInChannel( $text ) {
+         
+        // Hmm ?? Is this right?
+        $message = is_string($text) ? array( 'text' => $text ) : $text;
+
+        $response = Request::post( $this->getClient()->getUrl('chat.postMessage') )
+            ->body( $text )
+            ->send();
+
+        if( $response->code == 200 && isset($response->body->success) && $response->body->success == true ) {
+            return true;
+        } else {
+            if( isset($response->body->error) )	$this->lastError = $response->body->error;
+            else if( isset($response->body->message) ) $this->lastError = $response->body->message;
+            return false;
+        }
+    }
 }
