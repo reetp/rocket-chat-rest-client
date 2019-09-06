@@ -3,7 +3,7 @@
     "description": "Rocket Chat REST API client in PHP.",
     "version": "dev-master",
     "source": {
-        "url": "git://github.com/totototone/rocket-chat-rest-client.git",
+        "url": "git://github.com/reetp/rocket-chat-rest-client.git",
         "type": "git",
         "reference": "master"
     },
